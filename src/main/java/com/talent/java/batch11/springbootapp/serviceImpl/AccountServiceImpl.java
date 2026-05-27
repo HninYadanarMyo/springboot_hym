@@ -5,43 +5,55 @@ import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.model.enumType.TransactionType;
 import com.talent.java.batch11.springbootapp.repository.AccountRepository;
 import com.talent.java.batch11.springbootapp.repository.TransactionRepository;
+import com.talent.java.batch11.springbootapp.request.LoginInfo;
 import com.talent.java.batch11.springbootapp.service.AccountService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AccountServiceImpl implements AccountService {
-
     @Autowired
     AccountRepository accountRepository;
-
     @Autowired
     TransactionRepository transactionRepository;
 
     @Transactional
     @Override
-    public Account saveAccount(Account account) {
-        if (accountRepository.existsAccountByEmail(account.getEmail())){
-            throw new RuntimeException("Email already used.");
+    public void saveAccount(Account account) {
+        try {
+            System.out.println("Saving Account " + account);
+            accountRepository.save(account);
+        } catch (Exception e) {
+            throw new RuntimeException("Account can't save");
         }
-        if (accountRepository.existsAccountByPhoneNumber(account.getPhoneNumber())){
-            throw new RuntimeException("Phone number already used.");
-        }
-        return accountRepository.save(account);
     }
 
+
     @Override
-    public Account login(String email, String password) {
-        Account account = findAccountByEmail(email);
+    public void login(LoginInfo loginInfo) {
+        Account account = findAccountByEmail(loginInfo.getEmail());
         if (account == null) {
             throw new RuntimeException("Account does not exist.");
         }
-        if (!account.getPassword().equals(password)){
-            throw new RuntimeException("Incorrect Password");
+        if (!account.getPassword().equals(loginInfo.getPassword())) {
+            throw new RuntimeException("Incorrect Password!");
         }
-        return account;
     }
+
+    @Override
+    public void logout() {
+
+    }
+
+    @Override
+    public void registerAccount(Account account) {
+
+    }
+
+
     @Override
     public Account findAccountByEmail(String email){
         if (email == null || email.trim().isEmpty()){
@@ -113,7 +125,7 @@ public class AccountServiceImpl implements AccountService {
 
     private Account getAccountById(Long accountId){
         return accountRepository.findById(accountId)
-                .orElseThrow(()->new RuntimeException("Account Not Found"));
+                .orElseThrow(()->new RuntimeException("Account Not Found with id: "+accountId));
     }
     private void createTransactionHistory(Account account,String type,double amount,double previousAmount){
         Transaction tx = new Transaction();
@@ -123,7 +135,6 @@ public class AccountServiceImpl implements AccountService {
         tx.setTransactionType(TransactionType.valueOf(type));
         transactionRepository.save(tx);
     }
-
     @Transactional
     @Override
     public void updateBalanceById(long accountId, double newBalance){
@@ -131,4 +142,10 @@ public class AccountServiceImpl implements AccountService {
         account.setBalance(newBalance);
         accountRepository.save(account);
     }
+
+    @Override
+    public List<Account> getAllAccounts() {
+        return accountRepository.findAll();
+    }
+
 }

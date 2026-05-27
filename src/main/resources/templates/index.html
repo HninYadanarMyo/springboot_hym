@@ -1,0 +1,143 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en" xmlns:th="https://www.thymeleaf.org/">-->
+<!--<head>-->
+<!--    <meta charset="ISO-8859-1">-->
+<!--    <title>ATM </title>-->
+<!--    <link rel="stylesheet"-->
+<!--          href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"-->
+<!--          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"-->
+<!--          crossorigin="anonymous">-->
+<!--</head>-->
+<!--<body>-->
+<!--<div class="container my-2" align="center">-->
+
+<!--    <h3>Account List</h3>-->
+<!--    <a th:href="@{/register}" class="btn btn-primary btn-sm mb-3" >Register</a> or-->
+<!--    <a th:href="@{/login}" class="btn btn-primary btn-sm mb-3" >Login</a>-->
+
+<!--    <table style="width:80%" border="1"-->
+<!--           class = "table table-striped table-responsive-md">-->
+<!--        <thead>-->
+<!--        <tr>-->
+<!--            <th>Name</th>-->
+<!--            <th>Email</th>-->
+<!--            <th>Phone Number</th>-->
+<!--        </tr>-->
+<!--        </thead>-->
+<!--        <tbody>-->
+<!--        <tr th:each="account:${allaccount}">-->
+<!--            <td th:text="${account.name}"></td>-->
+<!--            <td th:text="${account.email}"></td>-->
+<!--            <td th:text="${account.phoneNumber}"></td>-->
+<!--            &lt;!&ndash;            <td> <a th:href="@{/showFormForUpdate/{id}(id=${account.id})}"&ndash;&gt;-->
+<!--            &lt;!&ndash;                    class="btn btn-primary">Update</a>&ndash;&gt;-->
+<!--            &lt;!&ndash;                <a th:href="@{/deleteEmployee/{id}(id=${account.id})}"&ndash;&gt;-->
+<!--            &lt;!&ndash;                   class="btn btn-danger">Delete</a>&ndash;&gt;-->
+<!--            &lt;!&ndash;            </td>&ndash;&gt;-->
+<!--        </tr>-->
+<!--        </tbody>-->
+<!--    </table>-->
+<!--</div>-->
+<!--</body>-->
+<!--</html>-->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org/">
+<head>
+    <meta charset="ISO-8859-1">
+    <title>ATM </title>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+          crossorigin="anonymous">
+</head>
+<body>
+<div class="container my-4" align="center">
+
+    <h3>Account List</h3>
+    <a th:href="@{/register}" class="btn btn-primary btn-sm mb-3" >Register</a> or
+    <a th:href="@{/login}" class="btn btn-primary btn-sm mb-3" >Login</a>
+    <a th:href="@{/logout}" class="btn btn-secondary btn-sm mb-3">Logout</a>
+
+
+    <table style="width:100%" border="1" class="table table-striped table-responsive-md table-bordered">
+        <thead class="thead-dark">
+        <tr>
+            <th>Acc ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone Number</th>
+            <th>Balance (Ks)</th>
+            <th style="width: 40%">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="account:${allaccount}">
+            <td th:text="${account.id}"></td>
+            <td th:text="${account.name}"></td>
+            <td th:text="${account.email}"></td>
+            <td th:text="${account.phoneNumber}"></td>
+            <td th:text="${account.balance}" class="font-weight-bold text-success"></td>
+            <td>
+                <a th:href="@{/transactions/{id}(id=${account.id})}" class="btn btn-primary btn-sm">History</a>
+            </td>
+            <td>
+                <div class="d-flex flex-column text-left">
+
+                    <form th:action="@{/deposit}" method="post" class="form-inline mb-1">
+                        <input type="hidden" name="accountId" th:value="${account.id}"/>
+                        <input type="number" name="amount" class="form-control form-control-sm mr-2" placeholder="Deposit Amount" required style="width: 120px;"/>
+                        <button type="submit" class="btn btn-success btn-sm">Deposit</button>
+                    </form>
+
+                    <form th:action="@{/withdraw}" method="post" class="form-inline mb-1">
+                        <input type="hidden" name="accountId" th:value="${account.id}"/>
+                        <input type="number" name="amount" class="form-control form-control-sm mr-2" placeholder="Withdraw Amount" required style="width: 120px;"/>
+                        <button type="submit" class="btn btn-danger btn-sm">Withdraw</button>
+                    </form>
+
+                    <form th:action="@{/topup}" method="post" class="form-inline">
+                        <input type="hidden" name="accountId" th:value="${account.id}"/>
+                        <input type="number" name="amount" class="form-control form-control-sm mr-2" placeholder="TopUp Amount" required style="width: 120px;"/>
+                        <button type="submit" class="btn btn-warning btn-sm text-white">Top-Up</button>
+                    </form>
+
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <hr class="my-4" style="border-top: 2px solid #ccc; width: 80%;"/>
+
+    <div class="card my-3" style="width: 50%; max-width: 500px; text-left: left; border: 1px solid #007bff;">
+        <div class="card-header bg-primary text-white font-weight-bold text-center">
+            Transfer Money (????????????)
+        </div>
+        <div class="card-body">
+            <form th:action="@{/transfer}" method="post" class="text-left">
+                <div class="form-group">
+                    <label class="font-weight-bold">Your Account ID (??????????? ID):</label>
+                    <input type="number" name="ownerId" class="form-control" placeholder="Enter your Account ID" required/>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Receiver Phone (???????????? ???????????):</label>
+                    <input type="text" name="receiverPhone" class="form-control" placeholder="Enter receiver's phone number" required/>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Amount (???????? ????):</label>
+                    <input type="number" name="amount" class="form-control" placeholder="Enter transfer amount" required/>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Your Password (??????? ????????????????):</label>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password" required/>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-block">Transfer Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

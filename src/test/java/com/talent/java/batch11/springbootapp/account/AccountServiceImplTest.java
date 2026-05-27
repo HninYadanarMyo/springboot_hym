@@ -98,9 +98,7 @@ public class AccountServiceImplTest {
         account.setEmail("saung@gmail.com");
         accountRepository.save(account);
         //accountService.saveAccount(account);
-
         verify(accountRepository).save(account);
-
         // when(accountRepository.findAccountByEmail("saung@gmail.com")).thenReturn(account);
     }
 }
