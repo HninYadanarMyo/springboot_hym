@@ -7,21 +7,18 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-
 @Data
 @MappedSuperclass
-public abstract class AbstractEntity {
+abstract  class AbstractEntity {
 
     @CreationTimestamp
-    @Column(nullable = true)
+    @Column(nullable = false)
     private LocalDateTime createdAt;
-    @Column(nullable = true)
     private String createdBy;
 
     @UpdateTimestamp
-    @Column(nullable = true)
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
-    @Column(nullable = true)
     private String updatedBy;
 
     private LocalDateTime deletedAt;

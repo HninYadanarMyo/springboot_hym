@@ -4,9 +4,10 @@ import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.model.enumType.TransactionType;
 import com.talent.java.batch11.springbootapp.repository.AccountRepository;
-import com.talent.java.batch11.springbootapp.repository.TransactionRepository;
 import com.talent.java.batch11.springbootapp.request.LoginInfo;
+import com.talent.java.batch11.springbootapp.request.TransferInfo;
 import com.talent.java.batch11.springbootapp.service.AccountService;
+import com.talent.java.batch11.springbootapp.service.TransactionService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,127 +19,43 @@ public class AccountServiceImpl implements AccountService {
     @Autowired
     AccountRepository accountRepository;
     @Autowired
-    TransactionRepository transactionRepository;
+    TransactionService transactionService;
 
-    @Transactional
     @Override
-    public void saveAccount(Account account) {
+    public Account login(LoginInfo loginInfo) {
+        Account account = accountRepository.findAccountByEmail(loginInfo.getEmail());
+        if (account == null || !account.getPassword().equals(loginInfo.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+        return account;
+    }
+
+    @Override
+    @Transactional
+    public Account saveAccount(Account account) {
         try {
-            System.out.println("Saving Account " + account);
-            accountRepository.save(account);
+            System.out.println("Saving Account " + account );
+            return accountRepository.save(account);
         } catch (Exception e) {
-            throw new RuntimeException("Account can't save");
-        }
-    }
-
-
-    @Override
-    public void login(LoginInfo loginInfo) {
-        Account account = findAccountByEmail(loginInfo.getEmail());
-        if (account == null) {
-            throw new RuntimeException("Account does not exist.");
-        }
-        if (!account.getPassword().equals(loginInfo.getPassword())) {
-            throw new RuntimeException("Incorrect Password!");
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public void logout() {
-
+    public Account findByEmail(String email) {
+        return accountRepository.findAccountByEmail(email);
     }
 
     @Override
-    public void registerAccount(Account account) {
-
-    }
-
-
-    @Override
-    public Account findAccountByEmail(String email){
-        if (email == null || email.trim().isEmpty()){
-            throw new IllegalArgumentException("Email cannot be null");
-        }
-        return accountRepository.findByEmail(email);
+    public Account findByPhoneNumber(String phoneNumber) {
+        return accountRepository.findAccountByPhoneNumber(phoneNumber);
     }
 
     @Override
-    public Account findAccountByPhoneNumber(String phoneNumber){
-        return accountRepository.findByPhoneNumber(phoneNumber);
-    }
-
     @Transactional
-    @Override
-    public void deposit(Long accountId,double amount){
-        Account account = getAccountById(accountId);
-        typeOfTransaction(account,amount,"DEPOSIT",true);
-    }
-
-    @Transactional
-    @Override
-    public void withDraw(Long accountId, double amount){
-        Account account = getAccountById(accountId);
-        typeOfTransaction(account,amount,"WITHDRAW",false);
-    }
-
-    @Transactional
-    @Override
-    public void topUp(Long accountId, double amount){
-        Account account = getAccountById(accountId);
-        typeOfTransaction(account,amount,"TOP_UP",false);
-    }
-
-    @Transactional
-    @Override
-    public void transfer(Long ownerId,String receiverPhone, double amount, String password){
-        Account sender = getAccountById(ownerId);
-        if (!sender.getPassword().equals(password)){
-            throw new RuntimeException("Incorrect Password");
-        }
-        Account receiver = findAccountByPhoneNumber(receiverPhone);
-        if (receiver == null){
-            throw new RuntimeException("Receiver phone number not found");
-        }
-        if (sender.equals(receiver)){
-            throw new RuntimeException("Cannot transfer to same account");
-        }
-        typeOfTransaction(sender,amount,"TRANSFER",false);
-        typeOfTransaction(receiver,amount,"TRANSFER",true);
-    }
-
-    private void typeOfTransaction(Account account,double amount, String transactionType, boolean isAdd){
-        double previousBalance = account.getBalance();
-        if(amount <= 0){
-            throw new RuntimeException("Amount must be greater than 0");
-        }
-        if(!isAdd && previousBalance < amount){
-            throw new RuntimeException("Insufficient balance");
-        }
-        if(isAdd){
-            account.setBalance(previousBalance + amount);
-        }else{
-            account.setBalance(previousBalance - amount);
-        }
-        accountRepository.save(account);
-        createTransactionHistory(account, transactionType, amount, previousBalance);
-    }
-
-    private Account getAccountById(Long accountId){
-        return accountRepository.findById(accountId)
-                .orElseThrow(()->new RuntimeException("Account Not Found with id: "+accountId));
-    }
-    private void createTransactionHistory(Account account,String type,double amount,double previousAmount){
-        Transaction tx = new Transaction();
-        tx.setAccount(account);
-        tx.setAmount(amount);
-        tx.setPreviousAmount(previousAmount);
-        tx.setTransactionType(TransactionType.valueOf(type));
-        transactionRepository.save(tx);
-    }
-    @Transactional
-    @Override
-    public void updateBalanceById(long accountId, double newBalance){
-        Account account = getAccountById(accountId);
+    public void updateBalanceById(Long accountId, double newBalance) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account not found with id: " + accountId));
         account.setBalance(newBalance);
         accountRepository.save(account);
     }
@@ -148,4 +65,90 @@ public class AccountServiceImpl implements AccountService {
         return accountRepository.findAll();
     }
 
+    @Override
+    public List<Transaction> getAllTransactionsByAccountId(long accountId) {
+
+        Account account = accountRepository.findAccountById(accountId);
+        return  account.getTransactions();
+    }
+
+
+
+    @Override
+    @Transactional
+    public void deposit(Account account, double amount) {
+        double previousBalance = account.getBalance();
+        double newBalance = previousBalance + amount;
+        this.updateBalanceById(account.getId(), newBalance);
+
+        transactionService.saveTransactionHistory(account, amount, "DEPOSIT", previousBalance);
+    }
+
+    @Override
+    @Transactional
+    public void withdraw(Account account, double amount) {
+        Account realAccount = accountRepository.findById(account.getId())
+                .orElseThrow(() -> new RuntimeException("Can't find account"));
+
+        if (realAccount.getBalance() < amount) {
+            throw new RuntimeException("Insufficient balance");
+        }
+
+        double previousBalance = realAccount.getBalance();
+        double newBalance = previousBalance - amount;
+
+        realAccount.setBalance(newBalance);
+        accountRepository.save(realAccount);
+
+        transactionService.saveTransactionHistory(realAccount, amount, "WITHDRAW", previousBalance);
+    }
+
+    @Override
+    @Transactional
+    public void topUp(Account account, double amount) {
+        Account realAccount = accountRepository.findById(account.getId())
+                .orElseThrow(() -> new RuntimeException("Can't find account"));
+
+        if (realAccount.getBalance() < amount) {
+            throw new RuntimeException("Insufficient balance");
+        }
+
+        double previousBalance = realAccount.getBalance();
+        double newBalance = previousBalance - amount;
+
+        realAccount.setBalance(newBalance);
+        accountRepository.save(realAccount);
+
+        transactionService.saveTransactionHistory(realAccount, amount, "TOP_UP", previousBalance);
+    }
+
+    @Override
+    @Transactional
+    public void transfer(Account account, TransferInfo transferInfo) {
+        Account sender = accountRepository.findById(account.getId())
+                .orElseThrow(() -> new RuntimeException("Can't find account"));
+
+        if (!sender.getPassword().equals(transferInfo.getPassword())) {
+            throw new RuntimeException("Incorrect Password");
+        }
+
+        if (sender.getBalance() < transferInfo.getAmount()) {
+            throw new RuntimeException("Insufficient Balance");
+        }
+
+        Account receiver = accountRepository.findAccountByPhoneNumber(transferInfo.getReceiverPhone());
+        if (receiver == null) {
+            throw new RuntimeException("Can't find receiver phone number");
+        }
+        double senderPreviousBalance = sender.getBalance();
+        sender.setBalance(senderPreviousBalance - transferInfo.getAmount());
+        accountRepository.save(sender);
+        transactionService.saveTransactionHistory(sender, transferInfo.getAmount(), "TRANSFER", senderPreviousBalance);
+        double receiverPreviousBalance = receiver.getBalance();
+        receiver.setBalance(receiverPreviousBalance + transferInfo.getAmount());
+        accountRepository.save(receiver);
+        transactionService.saveTransactionHistory(receiver, transferInfo.getAmount(), "TRANSFER", receiverPreviousBalance);
+    }
+
 }
+

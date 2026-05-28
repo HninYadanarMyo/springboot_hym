@@ -14,6 +14,8 @@
     <hr>
     <h2>Login Account</h2>
 
+    <div th:if="${loginError}" class="alert alert-danger" th:text="${loginError}"></div>
+
     <form action="#" th:action="@{/loginAccount}" th:object="${logininfo}"
           method="POST">
 
@@ -31,7 +33,7 @@
 
     <hr>
 
-    <a th:href="@{/}"> Back to Account List</a>
+    <a th:href="@{/}"> Back to Home</a>
 </div>
 </body>
 </html>

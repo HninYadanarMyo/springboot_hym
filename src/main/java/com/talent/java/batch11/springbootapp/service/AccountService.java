@@ -1,23 +1,23 @@
 package com.talent.java.batch11.springbootapp.service;
 
 import com.talent.java.batch11.springbootapp.model.Account;
+import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.request.LoginInfo;
+import com.talent.java.batch11.springbootapp.request.TransferInfo;
 
 import java.util.List;
 
 public interface AccountService {
-
-     public void login(LoginInfo loginInfo);
-     public void logout();
-     public void registerAccount(Account account);
-     public void saveAccount(Account account);
-     public Account findAccountByEmail(String email);
-     public Account findAccountByPhoneNumber(String phoneNumber);
-     void deposit(Long accountId,double amount);
-     void withDraw(Long accountId, double amount);
-     void topUp(Long accountId, double amount);
-     void transfer(Long ownerId, String receiverPhone, double amount, String password);
-     public void updateBalanceById(long accountId, double newBalance);
+     public Account login(LoginInfo loginInfo);
+     public Account saveAccount(Account account);
+     public Account findByEmail(String email);
+     public Account findByPhoneNumber(String phoneNumber);
+     public void updateBalanceById(Long accountId, double newBalance);
      public List<Account> getAllAccounts();
-
+     public List<Transaction> getAllTransactionsByAccountId(long accountId);
+      //hw
+     public void deposit(Account account,double amount);
+     public void topUp(Account account,double amount);
+     public void withdraw(Account account,double amount);
+     public void transfer(Account account, TransferInfo transferInfo);
 }

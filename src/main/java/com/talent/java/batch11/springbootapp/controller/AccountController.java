@@ -3,7 +3,9 @@ package com.talent.java.batch11.springbootapp.controller;
 import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.request.LoginInfo;
 import com.talent.java.batch11.springbootapp.request.RegisterInfo;
+import com.talent.java.batch11.springbootapp.request.TransferInfo;
 import com.talent.java.batch11.springbootapp.serviceImpl.AccountServiceImpl;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -12,13 +14,11 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class AccountController {
-
     @Autowired
     AccountServiceImpl accountService;
 
     @GetMapping("/")
     public String viewHomePage(Model model) {
-        model.addAttribute("allaccount", accountService.getAllAccounts());
         return "index";
     }
 
@@ -30,22 +30,24 @@ public class AccountController {
         return "register";
     }
 
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/";
+    }
+
     @RequestMapping(value = "/registerAccount", method = RequestMethod.POST)
     // to save account after submit register page
-    public String registerAccount(@ModelAttribute("registerInfo") RegisterInfo registerInfo) {
+    public String registerAccount(@ModelAttribute("registerInfo") RegisterInfo registerInfo, HttpSession session) {
 
         Account account = new Account();
-        account.setId(null);
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
-        accountService.saveAccount(account);
-        return  "redirect:/";
-    }
-//        account.setCreatedAt( java.time.LocalDateTime.now());
-//        account.setCreatedBy(registerInfo.getName());
-//        account.setUpdatedAt( java.time.LocalDateTime.now());
-//        account.setUpdatedBy(registerInfo.getName());
+        Account registeredAccount = accountService.saveAccount(account);
+        session.setAttribute("accountInfo", registeredAccount);
 
+        return  "redirect:/dashboard";
+    }
 
     @GetMapping("/login")
     // to show login page
@@ -57,49 +59,60 @@ public class AccountController {
 
     @PostMapping("/loginAccount")
     //after submit login page
-    public String loginAccount(@ModelAttribute("logininfo") LoginInfo loginInfo) {
-        accountService.login(loginInfo);
-        return  "redirect:/";
-    }
-    //Deposit
-    @PostMapping("/deposit")
-    public String deposit(@RequestParam("accountId") Long accountId,
-                          @RequestParam("amount") double amount) {
-        accountService.deposit(accountId, amount);
-        return "redirect:/";
+    public String loginAccount(@ModelAttribute("logininfo") LoginInfo loginInfo, HttpSession session) {
+
+        Account account = accountService.login(loginInfo);
+        session.setAttribute("accountInfo", account);
+
+        return  "redirect:/dashboard";
     }
 
-    //Withdraw
     @PostMapping("/withdraw")
-    public String withdraw(@RequestParam("accountId") Long accountId,
-                           @RequestParam("amount") double amount) {
-        accountService.withDraw(accountId, amount);
-        return "redirect:/";
+    public String withdraw(@ModelAttribute("amount") int  amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+         accountService.withdraw(loginAccount,amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return  "redirect:/dashboard";
     }
 
-    // Top-Up
     @PostMapping("/topup")
-    public String topUp(@RequestParam("accountId") Long accountId,
-                        @RequestParam("amount") double amount) {
-        accountService.topUp(accountId, amount);
-        return "redirect:/";
+    public String topUp(@ModelAttribute("amount") int  amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.topUp(loginAccount,amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return  "redirect:/dashboard";
     }
-
-    //  Transfer
     @PostMapping("/transfer")
-    public String transfer(@RequestParam("ownerId") Long ownerId,
-                           @RequestParam("receiverPhone") String receiverPhone,
-                           @RequestParam("amount") double amount,
-                           @RequestParam("password") String password) {
-        accountService.transfer(ownerId, receiverPhone, amount, password);
-        return "redirect:/";
-    }
-    //logout
-    @GetMapping("/logout")
-    public String logout(){
-        return "redirect:/";
+    public String transfer(@ModelAttribute("transferInfo") TransferInfo transferInfo, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.transfer(loginAccount,transferInfo);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return  "redirect:/dashboard";
     }
 
+    @PostMapping("/deposit")
+    public String deposit(@ModelAttribute("amount") int  amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.deposit(loginAccount,amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return  "redirect:/dashboard";
+    }
 
+    @GetMapping("/dashboard")
+    // to show dashboard page
+    public String dashboardPage(Model model, HttpSession session) {
 
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        model.addAttribute("currentAccount", loginAccount);
+        model.addAttribute("allaccount", accountService.getAllAccounts());
+        model.addAttribute("transactions",
+                accountService.getAllTransactionsByAccountId(loginAccount.getId
+                        ()));
+        return "dashboard";
+    }
 }
+

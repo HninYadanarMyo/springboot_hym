@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+          crossorigin="anonymous">
+</head>
+<body>
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <div>
+            <a th:href="@{/history}" class="btn btn-outline-secondary btn-sm">History</a>
+            <a th:href="@{/logout}" class="btn btn-outline-danger btn-sm">Logout</a>
+        </div>
+    </div>
+
+    <!--    <div th:if="${message}" class="alert alert-info mt-3" th:text="${message}"></div>-->
+
+    <div class="row mt-3">
+        <div class="col-md-4">
+            <h2 class="h5">Your Information</h2>
+            <table class="table table-sm table-bordered">
+                <tr><th>ID</th><td th:text="${currentAccount.id}"></td></tr>
+                <tr><th>Name</th><td th:text="${currentAccount.name}"></td></tr>
+                <tr><th>Email</th><td th:text="${currentAccount.email}"></td></tr>
+                <tr><th>Address</th><td th:text="${currentAccount.address}"></td></tr>
+                <tr><th>Phone</th><td th:text="${currentAccount.phoneNumber}"></td></tr>
+                <tr><th>Balance</th><td th:text="${#numbers.formatDecimal(currentAccount.balance, 1, 2)}"></td></tr>
+            </table>
+
+            <!--            <form th:action="@{/saveInfo}" method="post" class="mb-2">-->
+            <!--                <button type="submit" class="btn btn-secondary btn-sm">Save Your Infos</button>-->
+            <!--            </form>-->
+        </div>
+
+        <div class="col-md-8">
+            <h2 class="h5">Actions</h2>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <form th:action="@{/deposit}" method="post" class="border p-3">
+                        <h3 class="h6">Deposit Money</h3>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control mb-2" placeholder="Amount" required>
+                        <button type="submit" class="btn btn-primary btn-sm">Deposit</button>
+                    </form>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <form th:action="@{/withdraw}" method="post" class="border p-3">
+                        <h3 class="h6">Withdraw Money</h3>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control mb-2" placeholder="Amount" required>
+                        <button type="submit" class="btn btn-primary btn-sm">Withdraw</button>
+                    </form>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <form th:action="@{/transfer}"  th:object="${transferInfo}" method="post" class="border p-3" >
+                        <h3 class="h6">Transfer Money</h3>
+                        <input type="text" name="receiverPhone" class="form-control mb-2" placeholder="Receiver phone number" required>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control mb-2" placeholder="Amount" required>
+                        <input type="password" name="password" class="form-control mb-2" placeholder="Your password" required>
+                        <button type="submit" class="btn btn-primary btn-sm">Transfer</button>
+                    </form>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <form th:action="@{/topup}" method="post" class="border p-3">
+                        <h3 class="h6">Top Up</h3>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control mb-2" placeholder="Amount" required>
+                        <button type="submit" class="btn btn-primary btn-sm">Top Up</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">All Accounts</h2>
+    <table class="table table-sm table-striped table-bordered">
+        <thead class="thead-light">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone Number</th>
+            <th>Balance</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="account : ${allaccount}">
+            <td th:text="${account.id}"></td>
+            <td th:text="${account.name}"></td>
+            <td th:text="${account.email}"></td>
+            <td th:text="${account.phoneNumber}"></td>
+            <td th:text="${#numbers.formatDecimal(account.balance, 1, 2)}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

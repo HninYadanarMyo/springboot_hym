@@ -1,9 +1,10 @@
 package com.talent.java.batch11.springbootapp.serviceImpl;
 
+import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.model.Transaction;
+import com.talent.java.batch11.springbootapp.model.enumType.TransactionType;
 import com.talent.java.batch11.springbootapp.repository.TransactionRepository;
 import com.talent.java.batch11.springbootapp.service.TransactionService;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,16 +14,17 @@ import java.util.List;
 public class TransactionServiceImpl implements TransactionService {
 
     @Autowired
-    TransactionRepository transactionRepository;
-
-    @Transactional
+    private TransactionRepository transactionRepository;
     @Override
-    public Transaction saveTransaction(Transaction transaction) {
-        return transactionRepository.save(transaction);
+    public void saveTransactionHistory(Account account, double amount, String type, double previousAmount) {
+        Transaction transaction = new Transaction();
+        transaction.setAmount(amount);
+        transaction.setTransactionType(TransactionType.valueOf(type));
+        transaction.setPreviousAmount(previousAmount);
+        transaction.setAccount(account);
+        transaction.setCreatedAt(java.time.LocalDateTime.now()); // HTML ထဲက tx.createdAt အတွက်
+
+        transactionRepository.save(transaction);
     }
 
-    @Override
-    public List<Transaction> getAllTransactionByAccountId(Long accountId) {
-        return transactionRepository.findByAccountId(accountId);
-    }
 }
