@@ -34,7 +34,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public Account saveAccount(Account account) {
         try {
-            System.out.println("Saving Account " + account );
+            System.out.println("Saving Account " + account);
             return accountRepository.save(account);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -69,9 +69,8 @@ public class AccountServiceImpl implements AccountService {
     public List<Transaction> getAllTransactionsByAccountId(long accountId) {
 
         Account account = accountRepository.findAccountById(accountId);
-        return  account.getTransactions();
+        return account.getTransactions();
     }
-
 
 
     @Override
@@ -87,39 +86,22 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public void withdraw(Account account, double amount) {
-        Account realAccount = accountRepository.findById(account.getId())
-                .orElseThrow(() -> new RuntimeException("Can't find account"));
+        double previousBalance = accountRepository.findById(account.getId())
+                .map(Account::getBalance)
+                .orElse(0.0);
 
-        if (realAccount.getBalance() < amount) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        double previousBalance = realAccount.getBalance();
-        double newBalance = previousBalance - amount;
-
-        realAccount.setBalance(newBalance);
-        accountRepository.save(realAccount);
-
-        transactionService.saveTransactionHistory(realAccount, amount, "WITHDRAW", previousBalance);
+        Account updatedAccount = executeWithdrawLogic(account, amount);
+        transactionService.saveTransactionHistory(updatedAccount, amount, "WITHDRAW", previousBalance);
     }
 
     @Override
     @Transactional
     public void topUp(Account account, double amount) {
-        Account realAccount = accountRepository.findById(account.getId())
-                .orElseThrow(() -> new RuntimeException("Can't find account"));
-
-        if (realAccount.getBalance() < amount) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        double previousBalance = realAccount.getBalance();
-        double newBalance = previousBalance - amount;
-
-        realAccount.setBalance(newBalance);
-        accountRepository.save(realAccount);
-
-        transactionService.saveTransactionHistory(realAccount, amount, "TOP_UP", previousBalance);
+        double previousBalance = accountRepository.findById(account.getId())
+                .map(Account::getBalance)
+                .orElse(0.0);
+        Account updatedAccount = executeWithdrawLogic(account, amount);
+        transactionService.saveTransactionHistory(updatedAccount, amount, "TOP_UP", previousBalance);
     }
 
     @Override
@@ -150,5 +132,18 @@ public class AccountServiceImpl implements AccountService {
         transactionService.saveTransactionHistory(receiver, transferInfo.getAmount(), "TRANSFER", receiverPreviousBalance);
     }
 
-}
+    private Account executeWithdrawLogic(Account account, double amount) {
+        Account realAccount = accountRepository.findById(account.getId())
+                .orElseThrow(() -> new RuntimeException("Can't find account"));
 
+        if (realAccount.getBalance() < amount) {
+            throw new RuntimeException("Insufficient balance");
+        }
+
+        double previousBalance = realAccount.getBalance();
+        double newBalance = previousBalance - amount;
+
+        realAccount.setBalance(newBalance);
+        return accountRepository.save(realAccount);
+    }
+}
