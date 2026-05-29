@@ -8,6 +8,7 @@ import com.talent.java.batch11.springbootapp.request.TransferInfo;
 import java.util.List;
 
 public interface AccountService {
+     public void register(Account account);
      public Account login(LoginInfo loginInfo);
      public Account saveAccount(Account account);
      public Account findByEmail(String email);

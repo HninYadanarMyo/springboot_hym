@@ -2,7 +2,6 @@ package com.talent.java.batch11.springbootapp.serviceImpl;
 
 import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.model.Transaction;
-import com.talent.java.batch11.springbootapp.model.enumType.TransactionType;
 import com.talent.java.batch11.springbootapp.repository.AccountRepository;
 import com.talent.java.batch11.springbootapp.request.LoginInfo;
 import com.talent.java.batch11.springbootapp.request.TransferInfo;
@@ -20,6 +19,10 @@ public class AccountServiceImpl implements AccountService {
     AccountRepository accountRepository;
     @Autowired
     TransactionService transactionService;
+
+    @Override
+    public void register(Account account) {
+    }
 
     @Override
     public Account login(LoginInfo loginInfo) {
@@ -67,11 +70,9 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public List<Transaction> getAllTransactionsByAccountId(long accountId) {
-
         Account account = accountRepository.findAccountById(accountId);
         return account.getTransactions();
     }
-
 
     @Override
     @Transactional
@@ -79,7 +80,6 @@ public class AccountServiceImpl implements AccountService {
         double previousBalance = account.getBalance();
         double newBalance = previousBalance + amount;
         this.updateBalanceById(account.getId(), newBalance);
-
         transactionService.saveTransactionHistory(account, amount, "DEPOSIT", previousBalance);
     }
 
@@ -89,7 +89,6 @@ public class AccountServiceImpl implements AccountService {
         double previousBalance = accountRepository.findById(account.getId())
                 .map(Account::getBalance)
                 .orElse(0.0);
-
         Account updatedAccount = executeWithdrawLogic(account, amount);
         transactionService.saveTransactionHistory(updatedAccount, amount, "WITHDRAW", previousBalance);
     }
@@ -126,6 +125,7 @@ public class AccountServiceImpl implements AccountService {
         sender.setBalance(senderPreviousBalance - transferInfo.getAmount());
         accountRepository.save(sender);
         transactionService.saveTransactionHistory(sender, transferInfo.getAmount(), "TRANSFER", senderPreviousBalance);
+
         double receiverPreviousBalance = receiver.getBalance();
         receiver.setBalance(receiverPreviousBalance + transferInfo.getAmount());
         accountRepository.save(receiver);

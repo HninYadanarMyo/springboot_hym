@@ -17,6 +17,9 @@ public class Account  extends  AbstractEntity{
     private Long id;
 
     @Column(nullable = false)
+    private String role;
+
+    @Column(nullable = false)
     private String name;
     @Column(nullable = false, unique = true)
     private String email;

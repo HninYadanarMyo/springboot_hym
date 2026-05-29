@@ -22,7 +22,7 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setTransactionType(TransactionType.valueOf(type));
         transaction.setPreviousAmount(previousAmount);
         transaction.setAccount(account);
-        transaction.setCreatedAt(java.time.LocalDateTime.now()); // HTML ထဲက tx.createdAt အတွက်
+        transaction.setCreatedAt(java.time.LocalDateTime.now());
 
         transactionRepository.save(transaction);
     }

@@ -23,7 +23,6 @@ public class AccountController {
     }
 
     @GetMapping("/register")
-    //to show register page
     public String register(Model model) {
         RegisterInfo registerInfo = new RegisterInfo();
         model.addAttribute("registerInfo", registerInfo);
@@ -37,20 +36,22 @@ public class AccountController {
     }
 
     @RequestMapping(value = "/registerAccount", method = RequestMethod.POST)
-    // to save account after submit register page
     public String registerAccount(@ModelAttribute("registerInfo") RegisterInfo registerInfo, HttpSession session) {
-
         Account account = new Account();
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
+        account.setRole(registerInfo.getRole());
+
         Account registeredAccount = accountService.saveAccount(account);
         session.setAttribute("accountInfo", registeredAccount);
 
-        return  "redirect:/dashboard";
+        if (registeredAccount != null && "ADMIN".equals(registeredAccount.getRole())) {
+            return "redirect:/admin/dashboard";
+        }
+        return "redirect:/dashboard";
     }
 
     @GetMapping("/login")
-    // to show login page
     public String login(Model model) {
         LoginInfo loginInfo = new LoginInfo();
         model.addAttribute("logininfo", loginInfo);
@@ -58,61 +59,82 @@ public class AccountController {
     }
 
     @PostMapping("/loginAccount")
-    //after submit login page
     public String loginAccount(@ModelAttribute("logininfo") LoginInfo loginInfo, HttpSession session) {
-
         Account account = accountService.login(loginInfo);
         session.setAttribute("accountInfo", account);
 
-        return  "redirect:/dashboard";
+        if (account != null && "ADMIN".equals(account.getRole())) {
+            return "redirect:/admin/dashboard";
+        }
+        return "redirect:/dashboard";
     }
 
-    @PostMapping("/withdraw")
-    public String withdraw(@ModelAttribute("amount") int  amount, HttpSession session) {
+    @GetMapping("/admin/dashboard")
+    public String adminDashboardPage(Model model, HttpSession session) {
         Account loginAccount = (Account) session.getAttribute("accountInfo");
-         accountService.withdraw(loginAccount,amount);
-        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
-        session.setAttribute("accountInfo", updatedAccount);
-        return  "redirect:/dashboard";
-    }
-
-    @PostMapping("/topup")
-    public String topUp(@ModelAttribute("amount") int  amount, HttpSession session) {
-        Account loginAccount = (Account) session.getAttribute("accountInfo");
-        accountService.topUp(loginAccount,amount);
-        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
-        session.setAttribute("accountInfo", updatedAccount);
-        return  "redirect:/dashboard";
-    }
-    @PostMapping("/transfer")
-    public String transfer(@ModelAttribute("transferInfo") TransferInfo transferInfo, HttpSession session) {
-        Account loginAccount = (Account) session.getAttribute("accountInfo");
-        accountService.transfer(loginAccount,transferInfo);
-        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
-        session.setAttribute("accountInfo", updatedAccount);
-        return  "redirect:/dashboard";
-    }
-
-    @PostMapping("/deposit")
-    public String deposit(@ModelAttribute("amount") int  amount, HttpSession session) {
-        Account loginAccount = (Account) session.getAttribute("accountInfo");
-        accountService.deposit(loginAccount,amount);
-        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
-        session.setAttribute("accountInfo", updatedAccount);
-        return  "redirect:/dashboard";
+        if (loginAccount == null || !"ADMIN".equals(loginAccount.getRole())) {
+            return "redirect:/login";
+        }
+        model.addAttribute("currentAccount", loginAccount);
+        model.addAttribute("allaccount", accountService.getAllAccounts());
+        return "admin_dashboard";
     }
 
     @GetMapping("/dashboard")
-    // to show dashboard page
     public String dashboardPage(Model model, HttpSession session) {
-
         Account loginAccount = (Account) session.getAttribute("accountInfo");
+        if (loginAccount == null) {
+            return "redirect:/login";
+        }
         model.addAttribute("currentAccount", loginAccount);
-        model.addAttribute("allaccount", accountService.getAllAccounts());
-        model.addAttribute("transactions",
-                accountService.getAllTransactionsByAccountId(loginAccount.getId
-                        ()));
         return "dashboard";
     }
-}
 
+    @GetMapping("/history")
+    public String historyPage(Model model, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        if (loginAccount == null) {
+            return "redirect:/login";
+        }
+        Account currentAccount = accountService.findByEmail(loginAccount.getEmail());
+        model.addAttribute("currentAccount", currentAccount);
+        model.addAttribute("transactions", accountService.getAllTransactionsByAccountId(currentAccount.getId()));
+        return "history";
+    }
+
+    @PostMapping("/withdraw")
+    public String withdraw(@ModelAttribute("amount") int amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.withdraw(loginAccount, amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return "redirect:/dashboard";
+    }
+
+    @PostMapping("/topup")
+    public String topUp(@ModelAttribute("amount") int amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.topUp(loginAccount, amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return "redirect:/dashboard";
+    }
+
+    @PostMapping("/transfer")
+    public String transfer(@ModelAttribute("transferInfo") TransferInfo transferInfo, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.transfer(loginAccount, transferInfo);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return "redirect:/dashboard";
+    }
+
+    @PostMapping("/deposit")
+    public String deposit(@ModelAttribute("amount") int amount, HttpSession session) {
+        Account loginAccount = (Account) session.getAttribute("accountInfo");
+        accountService.deposit(loginAccount, amount);
+        Account updatedAccount = accountService.findByEmail(loginAccount.getEmail());
+        session.setAttribute("accountInfo", updatedAccount);
+        return "redirect:/dashboard";
+    }
+}

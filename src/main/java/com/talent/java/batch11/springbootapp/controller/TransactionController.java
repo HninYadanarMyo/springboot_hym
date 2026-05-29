@@ -14,19 +14,19 @@ import java.util.List;
 
 @Controller
 public class TransactionController {
-    @Autowired
-    AccountService accountService;
-
-    @GetMapping("/history")
-    public String showHistory(HttpSession session, Model model) {
-        Account loginAccount = (Account) session.getAttribute("accountInfo");
-        if (loginAccount == null) {
-            return "redirect:/login";
-        }
-        Account currentAccount = accountService.findByEmail(loginAccount.getEmail());
-        model.addAttribute("currentAccount", currentAccount);
-        model.addAttribute("transactions", currentAccount.getTransactions());
-
-        return "history";
-    }
+//    @Autowired
+//    AccountService accountService;
+//
+//    @GetMapping("/history")
+//    public String showHistory(HttpSession session, Model model) {
+//        Account loginAccount = (Account) session.getAttribute("accountInfo");
+//        if (loginAccount == null) {
+//            return "redirect:/login";
+//        }
+//        Account currentAccount = accountService.findByEmail(loginAccount.getEmail());
+//        model.addAttribute("currentAccount", currentAccount);
+//        model.addAttribute("transactions", currentAccount.getTransactions());
+//
+//        return "history";
+//    }
 }

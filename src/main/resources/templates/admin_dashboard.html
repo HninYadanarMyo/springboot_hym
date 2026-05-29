@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #000000;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        h1, h2 {
+            margin: 0;
+            color: #000000;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+        /* Logout Button - Red Style */
+        .btn-logout {
+            background-color: #dc3545;
+            color: #ffffff;
+            padding: 6px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .btn-logout:hover {
+            background-color: #c82333;
+        }
+        /* Summary Box */
+        .summary-box {
+            border: 1px solid #000000;
+            padding: 15px;
+            margin-bottom: 25px;
+            background-color: #f9f9f9;
+        }
+        .summary-box p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        /* Tables Styles (B&W) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #000000;
+        }
+        .bg-light-header {
+            background-color: #f9f9f9;
+            font-weight: bold;
+            width: 20%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>ATM - Admin Console</h1>
+    <div>
+        <span style="margin-right: 15px;">Welcome, <strong th:text="${currentAccount.name}">Admin</strong> (ADMIN)</span>
+        <a th:href="@{/logout}" class="btn-logout">Logout</a>
+    </div>
+</div>
+
+<div class="summary-box">
+    <p>Total Registered Accounts: <strong th:text="${#lists.size(allaccount)}">0</strong></p>
+</div>
+
+<h2>Admin Profile Information</h2>
+<table>
+    <tbody>
+    <tr>
+        <td class="bg-light-header">Admin ID</td>
+        <td th:text="${currentAccount.id}"></td>
+        <td class="bg-light-header">Email Address</td>
+        <td th:text="${currentAccount.email}"></td>
+    </tr>
+    <tr>
+        <td class="bg-light-header">Full Name</td>
+        <td th:text="${currentAccount.name}"></td>
+        <td class="bg-light-header">Contact Phone</td>
+        <td th:text="${currentAccount.phoneNumber}"></td>
+    </tr>
+    </tbody>
+</table>
+
+<h2>User Accounts Management</h2>
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone Number</th>
+        <th>Balance (MMK)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="account : ${allaccount}">
+        <td th:text="${account.id}"></td>
+        <td th:text="${account.name}"></td>
+        <td th:text="${account.email}"></td>
+        <td th:text="${account.phoneNumber}"></td>
+        <td th:text="${#numbers.formatDecimal(account.balance, 1, 2)}"></td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
