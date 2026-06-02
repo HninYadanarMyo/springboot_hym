@@ -30,8 +30,9 @@ public class AccountRestController {
 
     @Autowired
     private AccountRepository accountRepository;
+
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> registerAccount(@RequestBody RegisterInfo registerInfo) {
+    public ResponseEntity<Map<String, Object>> registerAccount(@RequestBody RegisterInfo registerInfo) {        //
         Account account = new Account();
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
@@ -46,7 +47,7 @@ public class AccountRestController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Object> loginAccount(@RequestBody LoginInfo loginInfo) {
+    public ResponseEntity<Object> loginAccount(@RequestBody LoginInfo loginInfo) {      //<Obj> -> accept both data type(user,admin)
         Account account = accountService.login(loginInfo);
         if (account != null && "ADMIN".equals(account.getRole())) {
             AdminLoginResponse adminResponse = new AdminLoginResponse();
@@ -65,7 +66,7 @@ public class AccountRestController {
         return ResponseEntity.ok(accountService.getAllAccounts());
     }
     @GetMapping("/{id}")
-    public ResponseEntity<Account> getAccountById(@PathVariable("id") long id) {
+    public ResponseEntity<Account> getAccountById(@PathVariable("id") Long id) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Account not found"));
         return ResponseEntity.ok(account);
@@ -106,6 +107,23 @@ public class AccountRestController {
         Map<String, Object> response = new HashMap<>();
         response.put("message", action + " successful");
         response.put("newBalance", updatedAccount.getBalance());
+        return ResponseEntity.ok(response);
+    }
+    @PostMapping("/transfer")
+    public ResponseEntity<Map<String, String>> transfer(
+            @RequestParam("accountId") long accountId,
+            @RequestBody TransferInfo transferInfo) {
+
+        List<Account> all = accountService.getAllAccounts();
+        Account account = all.stream()
+                .filter(a -> a.getId() == accountId)
+                .findFirst()
+                .orElseThrow();
+
+        accountService.transfer(account, transferInfo);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Transfer successful");
         return ResponseEntity.ok(response);
     }
     @DeleteMapping("/{id}")
