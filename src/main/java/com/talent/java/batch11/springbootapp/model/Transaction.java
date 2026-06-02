@@ -1,5 +1,6 @@
 package com.talent.java.batch11.springbootapp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.talent.java.batch11.springbootapp.model.enumType.TransactionType;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class Transaction extends  AbstractEntity {
 
     @ManyToOne
     @JoinColumn(name = "account_id")
+    @JsonIgnore
     private Account account;
 
 }

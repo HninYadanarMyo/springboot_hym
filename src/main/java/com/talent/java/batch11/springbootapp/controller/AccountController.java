@@ -1,9 +1,9 @@
 package com.talent.java.batch11.springbootapp.controller;
 
 import com.talent.java.batch11.springbootapp.model.Account;
-import com.talent.java.batch11.springbootapp.request.LoginInfo;
-import com.talent.java.batch11.springbootapp.request.RegisterInfo;
-import com.talent.java.batch11.springbootapp.request.TransferInfo;
+import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
+import com.talent.java.batch11.springbootapp.dto.request.RegisterInfo;
+import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
 import com.talent.java.batch11.springbootapp.serviceImpl.AccountServiceImpl;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.BeanUtils;
@@ -22,11 +22,28 @@ public class AccountController {
         return "index";
     }
 
-    @GetMapping("/register")
+    @GetMapping("/register")//post
     public String register(Model model) {
         RegisterInfo registerInfo = new RegisterInfo();
         model.addAttribute("registerInfo", registerInfo);
         return "register";
+    }
+    @GetMapping("/login")//post
+    public String login(Model model) {
+        LoginInfo loginInfo = new LoginInfo();
+        model.addAttribute("logininfo", loginInfo);
+        return "login";
+    }
+
+    @PostMapping("/loginAccount")
+    public String loginAccount(@ModelAttribute("logininfo") LoginInfo loginInfo, HttpSession session) {
+        Account account = accountService.login(loginInfo);
+        session.setAttribute("accountInfo", account);
+
+        if (account != null && "ADMIN".equals(account.getRole())) {
+            return "redirect:/admin/dashboard";
+        }
+        return "redirect:/dashboard";
     }
 
     @GetMapping("/logout")
@@ -51,23 +68,7 @@ public class AccountController {
         return "redirect:/dashboard";
     }
 
-    @GetMapping("/login")
-    public String login(Model model) {
-        LoginInfo loginInfo = new LoginInfo();
-        model.addAttribute("logininfo", loginInfo);
-        return "login";
-    }
 
-    @PostMapping("/loginAccount")
-    public String loginAccount(@ModelAttribute("logininfo") LoginInfo loginInfo, HttpSession session) {
-        Account account = accountService.login(loginInfo);
-        session.setAttribute("accountInfo", account);
-
-        if (account != null && "ADMIN".equals(account.getRole())) {
-            return "redirect:/admin/dashboard";
-        }
-        return "redirect:/dashboard";
-    }
 
     @GetMapping("/admin/dashboard")
     public String adminDashboardPage(Model model, HttpSession session) {

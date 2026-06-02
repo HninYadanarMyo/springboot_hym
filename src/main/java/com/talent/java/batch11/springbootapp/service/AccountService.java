@@ -2,8 +2,8 @@ package com.talent.java.batch11.springbootapp.service;
 
 import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.model.Transaction;
-import com.talent.java.batch11.springbootapp.request.LoginInfo;
-import com.talent.java.batch11.springbootapp.request.TransferInfo;
+import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
+import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
 
 import java.util.List;
 
