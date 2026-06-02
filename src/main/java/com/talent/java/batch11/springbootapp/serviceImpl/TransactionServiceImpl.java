@@ -27,4 +27,21 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
     }
 
+    @Override
+    public List<Transaction> getAllTransactions() {
+        return transactionRepository.findAll();
+    }
+
+    @Override
+    public Transaction getTransactionById(long id) {
+        return transactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+    }
+
+    @Override
+    public List<Transaction> getTransactionsByType(String type) {
+        TransactionType enumType = TransactionType.valueOf(type.toUpperCase());
+        return transactionRepository.findByTransactionType(enumType);
+    }
+
 }

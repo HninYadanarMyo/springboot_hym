@@ -5,12 +5,10 @@ import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
 import com.talent.java.batch11.springbootapp.dto.request.RegisterInfo;
 import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
-import com.talent.java.batch11.springbootapp.dto.request.WithdrawRequest;
 import com.talent.java.batch11.springbootapp.dto.response.AdminLoginResponse;
 import com.talent.java.batch11.springbootapp.dto.response.UserLoginResponse;
-import com.talent.java.batch11.springbootapp.dto.response.WithdrawResponse;
 import com.talent.java.batch11.springbootapp.service.AccountService;
-import com.talent.java.batch11.springbootapp.repository.AccountRepository; // repository လိုအပ်လို့ import တိုးထားပါတယ်
+import com.talent.java.batch11.springbootapp.repository.AccountRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,8 +29,12 @@ public class AccountRestController {
     @Autowired
     private AccountRepository accountRepository;
 
+    private Account findAccountOrThrow(long id) {
+        return accountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+    }
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> registerAccount(@RequestBody RegisterInfo registerInfo) {        //
+    public ResponseEntity<Map<String, Object>> registerAccount(@RequestBody RegisterInfo registerInfo) {
         Account account = new Account();
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
@@ -47,7 +49,7 @@ public class AccountRestController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Object> loginAccount(@RequestBody LoginInfo loginInfo) {      //<Obj> -> accept both data type(user,admin)
+    public ResponseEntity<Object> loginAccount(@RequestBody LoginInfo loginInfo) {
         Account account = accountService.login(loginInfo);
         if (account != null && "ADMIN".equals(account.getRole())) {
             AdminLoginResponse adminResponse = new AdminLoginResponse();
@@ -61,14 +63,33 @@ public class AccountRestController {
         userResponse.setTransactions(accountService.getAllTransactionsByAccountId(account.getId()));
         return ResponseEntity.ok(userResponse);
     }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<Map<String, String>> transfer(
+            @RequestParam("accountId") long accountId,
+            @RequestBody TransferInfo transferInfo) {
+        Account account = findAccountOrThrow(accountId);
+        accountService.transfer(account, transferInfo);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Transfer successful");
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/admin/all-accounts")
+    public ResponseEntity<List<Account>> getAllAccountsForAdmin() {
+        return ResponseEntity.ok(accountService.getAllAccounts());
+    }
     @GetMapping
     public ResponseEntity<List<Account>> getAllAccounts() {
         return ResponseEntity.ok(accountService.getAllAccounts());
     }
     @GetMapping("/{id}")
-    public ResponseEntity<Account> getAccountById(@PathVariable("id") Long id) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+    public ResponseEntity<Account> getAccountById(@PathVariable("id") long id) {
+        Account account = findAccountOrThrow(id);
+        return ResponseEntity.ok(account);
+    }
+    @GetMapping("/{id}/detail-only")
+    public ResponseEntity<Account> getAccountDetailWithoutTransactions(@PathVariable("id") long id) {
+        Account account = findAccountOrThrow(id);
         return ResponseEntity.ok(account);
     }
     @GetMapping("/{id}/transactions")
@@ -77,23 +98,21 @@ public class AccountRestController {
     }
     @PutMapping("/{id}")
     public ResponseEntity<Account> updateAccountProfile(@PathVariable("id") long id, @RequestBody RegisterInfo updateInfo) {
-        Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        Account existingAccount = findAccountOrThrow(id);
         existingAccount.setName(updateInfo.getName());
         existingAccount.setEmail(updateInfo.getEmail());
         existingAccount.setPhoneNumber(updateInfo.getPhoneNumber());
         existingAccount.setAddress(updateInfo.getAddress());
-        if(updateInfo.getPassword() != null) {
+        if (updateInfo.getPassword() != null) {
             existingAccount.setPassword(updateInfo.getPassword());
         }
-
         Account savedAccount = accountRepository.save(existingAccount);
         return ResponseEntity.ok(savedAccount);
     }
+
     @PatchMapping("/{id}/balance")
     public ResponseEntity<Map<String, Object>> updateBalance(@PathVariable("id") long id, @RequestParam("amount") double amount, @RequestParam("action") String action) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        Account account = findAccountOrThrow(id);
 
         if ("DEPOSIT".equalsIgnoreCase(action)) {
             accountService.deposit(account, amount);
@@ -102,34 +121,15 @@ public class AccountRestController {
         } else if ("TOPUP".equalsIgnoreCase(action)) {
             accountService.topUp(account, amount);
         }
-
-        Account updatedAccount = accountRepository.findById(id).orElseThrow();
+        Account updatedAccount = findAccountOrThrow(id);
         Map<String, Object> response = new HashMap<>();
         response.put("message", action + " successful");
         response.put("newBalance", updatedAccount.getBalance());
         return ResponseEntity.ok(response);
     }
-    @PostMapping("/transfer")
-    public ResponseEntity<Map<String, String>> transfer(
-            @RequestParam("accountId") long accountId,
-            @RequestBody TransferInfo transferInfo) {
-
-        List<Account> all = accountService.getAllAccounts();
-        Account account = all.stream()
-                .filter(a -> a.getId() == accountId)
-                .findFirst()
-                .orElseThrow();
-
-        accountService.transfer(account, transferInfo);
-
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Transfer successful");
-        return ResponseEntity.ok(response);
-    }
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String,String>> deleteAccount(@PathVariable("id") Long id){
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account Not Found"));
+    public ResponseEntity<Map<String,String>> deleteAccount(@PathVariable("id")Long id){
+        Account account = findAccountOrThrow(id);
         accountRepository.delete(account);
         Map<String,String> response = new HashMap<>();
         response.put("message","Account with ID "+id+" has been successfully deleted");

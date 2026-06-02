@@ -8,5 +8,10 @@ import java.util.List;
 
 public interface TransactionService {
     void saveTransactionHistory(Account account, double amount, String type, double previousAmount);
-//    List<Transaction> getAllTransactionByAccountId(Long accountId);
+
+    List<Transaction> getAllTransactions();
+
+    Transaction getTransactionById(long id);
+
+    List<Transaction> getTransactionsByType(String type);
 }
