@@ -1,28 +1,30 @@
 package com.talent.java.batch11.springbootapp.serviceImpl;
 
+import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
+import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
 import com.talent.java.batch11.springbootapp.model.Account;
 import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.repository.AccountRepository;
-import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
-import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
 import com.talent.java.batch11.springbootapp.service.AccountService;
-import com.talent.java.batch11.springbootapp.service.TransactionService;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
-    @Autowired
-    AccountRepository accountRepository;
-    @Autowired
-    TransactionService transactionService;
 
-    @Override
-    public void register(Account account) {
-    }
+    private final AccountRepository accountRepository;
+    private final TokenServiceImpl tokenService;
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+
 
     @Override
     public Account login(LoginInfo loginInfo) {
@@ -34,12 +36,71 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public ResponseEntity handleLoginRequest(LoginInfo loginInfo) {
+
+        logger.info("Reach Login controller");
+
+        Account account = accountRepository.findAccountByEmail(loginInfo.getEmail());
+        if (account == null || !account.getPassword().equals(loginInfo.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        String accessToken = tokenService.generateAccessToken(account);
+        String refreshToken = tokenService.generateRefreshToken(account);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("accessToken", accessToken);
+        headers.add("refreshToken", refreshToken);
+
+        return new ResponseEntity<>(account, headers, HttpStatus.OK);
+    }
+
+    @Override
+    public void deposit(Account loginAccount, int amount) {
+        loginAccount.setBalance(loginAccount.getBalance() + amount);
+        accountRepository.save(loginAccount);
+    }
+
+    @Override
+    public void withdraw(Account loginAccount, int amount) {
+        if (loginAccount.getBalance() < amount) {
+            throw new RuntimeException("Insufficient funds");
+        }
+        loginAccount.setBalance(loginAccount.getBalance() - amount);
+        accountRepository.save(loginAccount);
+
+    }
+
+    @Override
+    public void topUp(Account loginAccount, int amount) {
+        loginAccount.setBalance(loginAccount.getBalance() + amount);
+        accountRepository.save(loginAccount);
+    }
+
+
+    @Override
+    public void transfer(Account loginAccount, TransferInfo transferInfo) {
+        if (loginAccount.getBalance() < transferInfo.getAmount()) {
+            throw new RuntimeException("Insufficient funds");
+        }
+        Account recipientAccount = accountRepository.findAccountByPhoneNumber(transferInfo.getReceiverPhone());
+        if (recipientAccount == null) {
+            throw new RuntimeException("Recipient account not found");
+        }
+        loginAccount.setBalance(loginAccount.getBalance() - transferInfo.getAmount());
+        recipientAccount.setBalance(recipientAccount.getBalance() + transferInfo.getAmount());
+        accountRepository.save(loginAccount);
+        accountRepository.save(recipientAccount);
+    }
+
+    @Override
     @Transactional
     public Account saveAccount(Account account) {
         try {
             System.out.println("Saving Account " + account);
             return accountRepository.save(account);
         } catch (Exception e) {
+            logger.error("Error saving Account " + account, e);
             throw new RuntimeException(e);
         }
     }
@@ -70,80 +131,28 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public List<Transaction> getAllTransactionsByAccountId(long accountId) {
+
         Account account = accountRepository.findAccountById(accountId);
         return account.getTransactions();
     }
 
     @Override
-    @Transactional
-    public void deposit(Account account, double amount) {
-        double previousBalance = account.getBalance();
-        double newBalance = previousBalance + amount;
-        this.updateBalanceById(account.getId(), newBalance);
-        transactionService.saveTransactionHistory(account, amount, "DEPOSIT", previousBalance);
-    }
+    public ResponseEntity getAccountById(long accountId) {
+        Account account;
+        try {
 
-    @Override
-    @Transactional
-    public void withdraw(Account account, double amount) {
-        double previousBalance = accountRepository.findById(account.getId())
-                .map(Account::getBalance)
-                .orElse(0.0);
-        Account updatedAccount = executeWithdrawLogic(account, amount);
-        transactionService.saveTransactionHistory(updatedAccount, amount, "WITHDRAW", previousBalance);
-    }
-
-    @Override
-    @Transactional
-    public void topUp(Account account, double amount) {
-        double previousBalance = accountRepository.findById(account.getId())
-                .map(Account::getBalance)
-                .orElse(0.0);
-        Account updatedAccount = executeWithdrawLogic(account, amount);
-        transactionService.saveTransactionHistory(updatedAccount, amount, "TOP_UP", previousBalance);
-    }
-
-    @Override
-    @Transactional
-    public void transfer(Account account, TransferInfo transferInfo) {
-        Account sender = accountRepository.findById(account.getId())
-                .orElseThrow(() -> new RuntimeException("Can't find account"));
-
-        if (!sender.getPassword().equals(transferInfo.getPassword())) {
-            throw new RuntimeException("Incorrect Password");
+            if (accountId == 0) {
+                return ResponseEntity.noContent().build();
+            }
+            account = accountRepository.findAccountById(accountId);
+            if (account == null) {
+                return ResponseEntity.notFound().build();
+            }
+            account.setTransactions(null);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
 
-        if (sender.getBalance() < transferInfo.getAmount()) {
-            throw new RuntimeException("Insufficient Balance");
-        }
-
-        Account receiver = accountRepository.findAccountByPhoneNumber(transferInfo.getReceiverPhone());
-        if (receiver == null) {
-            throw new RuntimeException("Can't find receiver phone number");
-        }
-        double senderPreviousBalance = sender.getBalance();
-        sender.setBalance(senderPreviousBalance - transferInfo.getAmount());
-        accountRepository.save(sender);
-        transactionService.saveTransactionHistory(sender, transferInfo.getAmount(), "TRANSFER", senderPreviousBalance);
-
-        double receiverPreviousBalance = receiver.getBalance();
-        receiver.setBalance(receiverPreviousBalance + transferInfo.getAmount());
-        accountRepository.save(receiver);
-        transactionService.saveTransactionHistory(receiver, transferInfo.getAmount(), "TRANSFER", receiverPreviousBalance);
-    }
-
-    private Account executeWithdrawLogic(Account account, double amount) {
-        Account realAccount = accountRepository.findById(account.getId())
-                .orElseThrow(() -> new RuntimeException("Can't find account"));
-
-        if (realAccount.getBalance() < amount) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        double previousBalance = realAccount.getBalance();
-        double newBalance = previousBalance - amount;
-
-        realAccount.setBalance(newBalance);
-        return accountRepository.save(realAccount);
+        return ResponseEntity.ok(account);
     }
 }

@@ -1,7 +1,8 @@
 package com.talent.java.batch11.springbootapp.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class Account  extends  AbstractEntity{
             , orphanRemoval = true)
     private List<Transaction> transactions = new ArrayList<>();
 
-
+    private String roleName;
 
 
 }

@@ -1,138 +1,170 @@
 package com.talent.java.batch11.springbootapp.controller;
 
-import com.talent.java.batch11.springbootapp.model.Account;
-import com.talent.java.batch11.springbootapp.model.Transaction;
 import com.talent.java.batch11.springbootapp.dto.request.LoginInfo;
 import com.talent.java.batch11.springbootapp.dto.request.RegisterInfo;
 import com.talent.java.batch11.springbootapp.dto.request.TransferInfo;
-import com.talent.java.batch11.springbootapp.dto.response.AdminLoginResponse;
-import com.talent.java.batch11.springbootapp.dto.response.UserLoginResponse;
-import com.talent.java.batch11.springbootapp.service.AccountService;
-import com.talent.java.batch11.springbootapp.repository.AccountRepository;
+import com.talent.java.batch11.springbootapp.model.Account;
+import com.talent.java.batch11.springbootapp.serviceImpl.AccountServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountRestController {
 
-    @Autowired
-    private AccountService accountService;
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
-    private AccountRepository accountRepository;
+    private AccountServiceImpl accountService;
 
-    private Account findAccountOrThrow(long id) {
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+    @PostMapping("/login")
+    public ResponseEntity loginAccount(@RequestBody LoginInfo loginInfo) {
+        logger.info("Reach Login controller");
+        return accountService.handleLoginRequest(loginInfo);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity getAccountByAccountId(@PathVariable int id) {
+        logger.info("Fetching account by ID: {}", id);
+        return accountService.getAccountById(id);
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> registerAccount(@RequestBody RegisterInfo registerInfo) {
+    public ResponseEntity createAccount(@RequestBody RegisterInfo registerInfo) {
+        logger.info("Registering new account for email: {}", registerInfo.getEmail());
         Account account = new Account();
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
-        account.setRole(registerInfo.getRole());
-
+        account.setRoleName("ROLE_USER");
         Account registeredAccount = accountService.saveAccount(account);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Registration successful");
-        response.put("account", registeredAccount);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        logger.info("Account registration successful for email: {}", registerInfo.getEmail());
+        return ResponseEntity.ok(registeredAccount);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<Object> loginAccount(@RequestBody LoginInfo loginInfo) {
-        Account account = accountService.login(loginInfo);
-        if (account != null && "ADMIN".equals(account.getRole())) {
-            AdminLoginResponse adminResponse = new AdminLoginResponse();
-            adminResponse.setAccounts(accountService.getAllAccounts());
-            adminResponse.setTransactions(accountService.getAllTransactionsByAccountId(account.getId()));
-            return ResponseEntity.ok(adminResponse);
-        }
+    @DeleteMapping("/{id}")
+    public int deleteAccount(@PathVariable int id) {
+        logger.info("Deleting account ID: {}", id);
+        return id;
+    }
 
-        UserLoginResponse userResponse = new UserLoginResponse();
-        userResponse.setAccount(account);
-        userResponse.setTransactions(accountService.getAllTransactionsByAccountId(account.getId()));
-        return ResponseEntity.ok(userResponse);
+    @PutMapping("/{id}")
+    public Account updateAccount(@RequestBody Account account) {
+        logger.info("Updating account ID: {}", account.getId());
+        return account;
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<?> getHistory(@PathVariable int id) {
+        logger.info("Fetching transaction history for account ID: {}", id);
+        return ResponseEntity.ok(accountService.getAllTransactionsByAccountId(id));
+    }
+
+    @GetMapping("/admin/all")
+    public ResponseEntity<?> getAllAccounts() {
+        logger.info("Admin fetching all accounts");
+        return ResponseEntity.ok(accountService.getAllAccounts());
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<?> withdraw(@RequestBody Map<String, Integer> request) {
+        String email = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        try {
+            int amount = request.get("amount");
+            logger.info("Entering withdraw API. User: {}, Amount: {}", email, amount);
+
+            Account loginAccount = accountService.findByEmail(email);
+            accountService.withdraw(loginAccount, amount);
+            Account updatedAccount = accountService.findByEmail(email);
+
+            logger.info("Withdraw successful for User: {}", email);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            logger.error("Withdraw failed for User: {}. Error: {}", email, e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/topup")
+    public ResponseEntity<?> topUp(@RequestBody Map<String, Integer> request) {
+        String email = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        try {
+            int amount = request.get("amount");
+            logger.info("Entering topup API. User: {}, Amount: {}", email, amount);
+
+            Account loginAccount = accountService.findByEmail(email);
+            accountService.topUp(loginAccount, amount);
+            Account updatedAccount = accountService.findByEmail(email);
+
+            logger.info("Topup successful for User: {}", email);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            logger.error("Topup failed for User: {}. Error: {}", email, e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "fail");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/deposit")
+    public ResponseEntity<?> deposit(@RequestBody Map<String, Integer> request) {
+        String email = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        try {
+            int amount = request.get("amount");
+            logger.info("Entering deposit API. User: {}, Amount: {}", email, amount);
+
+            Account loginAccount = accountService.findByEmail(email);
+            accountService.deposit(loginAccount, amount);
+            Account updatedAccount = accountService.findByEmail(email);
+
+            logger.info("Deposit successful for User: {}", email);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            logger.error("Deposit failed for User: {}. Error: {}", email, e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "fail");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     @PostMapping("/transfer")
-    public ResponseEntity<Map<String, String>> transfer(
-            @RequestParam("accountId") long accountId,
-            @RequestBody TransferInfo transferInfo) {
-        Account account = findAccountOrThrow(accountId);
-        accountService.transfer(account, transferInfo);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Transfer successful");
-        return ResponseEntity.ok(response);
-    }
-    @GetMapping("/admin/all-accounts")
-    public ResponseEntity<List<Account>> getAllAccountsForAdmin() {
-        return ResponseEntity.ok(accountService.getAllAccounts());
-    }
-    @GetMapping
-    public ResponseEntity<List<Account>> getAllAccounts() {
-        return ResponseEntity.ok(accountService.getAllAccounts());
-    }
-    @GetMapping("/{id}")
-    public ResponseEntity<Account> getAccountById(@PathVariable("id") long id) {
-        Account account = findAccountOrThrow(id);
-        return ResponseEntity.ok(account);
-    }
-    @GetMapping("/{id}/detail-only")
-    public ResponseEntity<Account> getAccountDetailWithoutTransactions(@PathVariable("id") long id) {
-        Account account = findAccountOrThrow(id);
-        return ResponseEntity.ok(account);
-    }
-    @GetMapping("/{id}/transactions")
-    public ResponseEntity<List<Transaction>> getAccountTransactions(@PathVariable("id") long id) {
-        return ResponseEntity.ok(accountService.getAllTransactionsByAccountId(id));
-    }
-    @PutMapping("/{id}")
-    public ResponseEntity<Account> updateAccountProfile(@PathVariable("id") long id, @RequestBody RegisterInfo updateInfo) {
-        Account existingAccount = findAccountOrThrow(id);
-        existingAccount.setName(updateInfo.getName());
-        existingAccount.setEmail(updateInfo.getEmail());
-        existingAccount.setPhoneNumber(updateInfo.getPhoneNumber());
-        existingAccount.setAddress(updateInfo.getAddress());
-        if (updateInfo.getPassword() != null) {
-            existingAccount.setPassword(updateInfo.getPassword());
-        }
-        Account savedAccount = accountRepository.save(existingAccount);
-        return ResponseEntity.ok(savedAccount);
-    }
+    public ResponseEntity<?> transfer(@RequestBody TransferInfo transferInfo) {
+        String senderEmail = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        try {
+            logger.info("Entering transfer API. Sender: {}, Receiver Phone: {}, Amount: {}",
+                    senderEmail, transferInfo.getReceiverPhone(), transferInfo.getAmount());
 
-    @PatchMapping("/{id}/balance")
-    public ResponseEntity<Map<String, Object>> updateBalance(@PathVariable("id") long id, @RequestParam("amount") double amount, @RequestParam("action") String action) {
-        Account account = findAccountOrThrow(id);
-
-        if ("DEPOSIT".equalsIgnoreCase(action)) {
-            accountService.deposit(account, amount);
-        } else if ("WITHDRAW".equalsIgnoreCase(action)) {
-            accountService.withdraw(account, amount);
-        } else if ("TOPUP".equalsIgnoreCase(action)) {
-            accountService.topUp(account, amount);
+            Account senderAccount = accountService.findByEmail(senderEmail);
+            if (!senderAccount.getPassword().equals(transferInfo.getPassword())) {
+                logger.warn("Transfer password verification failed for Sender: {}", senderEmail);
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("status", "fail");
+                errorResponse.put("message", "Incorrect password");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            }
+            accountService.transfer(senderAccount, transferInfo);
+            Account updatedAccount = accountService.findByEmail(senderEmail);
+            logger.info("Transfer completed", senderEmail);
+            return ResponseEntity.ok(updatedAccount);
+        }catch (Exception e) {
+            logger.error("Transfer failed for Sender: {}. Error: {}", senderEmail, e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "fail");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-        Account updatedAccount = findAccountOrThrow(id);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", action + " successful");
-        response.put("newBalance", updatedAccount.getBalance());
-        return ResponseEntity.ok(response);
-    }
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String,String>> deleteAccount(@PathVariable("id")Long id){
-        Account account = findAccountOrThrow(id);
-        accountRepository.delete(account);
-        Map<String,String> response = new HashMap<>();
-        response.put("message","Account with ID "+id+" has been successfully deleted");
-        return ResponseEntity.ok(response);
     }
 }
