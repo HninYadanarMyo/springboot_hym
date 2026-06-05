@@ -1,1 +1,1 @@
--- alter table users add column birth_date timestamp;
+alter table users add column birth_date timestamp;

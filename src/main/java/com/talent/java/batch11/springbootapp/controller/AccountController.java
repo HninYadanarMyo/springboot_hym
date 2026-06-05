@@ -59,7 +59,7 @@ public class AccountController {
         account.setBalance(0);
         account.setRole(registerInfo.getRole());
 
-        Account registeredAccount = accountService.saveAccount(account);
+        Account registeredAccount = accountService.register(registerInfo);
         session.setAttribute("accountInfo", registeredAccount);
 
         if (registeredAccount != null && "ADMIN".equals(registeredAccount.getRole())) {
