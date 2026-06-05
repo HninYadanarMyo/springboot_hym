@@ -17,4 +17,9 @@ public interface AccountService {
      Account findByEmail(String email);
      List<Account> getAllAccounts();
      List<Transaction> getAllTransactionsByAccountId(long accountId);
+     Account getAccountById(long accountId); // ဒါလေးပါ ထည့်ထားပေးပါ
+     Account withdraw(String email, int amount); // ဒါလေးပါ
+     Account topUp(String email, int amount); // ဒါလေးပါ
+     Account deposit(String email, int amount); // ဒါလေးပါ
+     Account transfer(String senderEmail, TransferInfo transferInfo); // ဒါလေးပါ
 }

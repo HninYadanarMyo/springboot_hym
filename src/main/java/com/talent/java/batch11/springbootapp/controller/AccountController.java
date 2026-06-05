@@ -24,13 +24,13 @@ public class AccountController {
 
     @GetMapping("/register")//post
     public String register(Model model) {
-        RegisterInfo registerInfo = new RegisterInfo();
+        RegisterInfo registerInfo = new RegisterInfo("", "", "", "", "", "", "");
         model.addAttribute("registerInfo", registerInfo);
         return "register";
     }
     @GetMapping("/login")//post
     public String login(Model model) {
-        LoginInfo loginInfo = new LoginInfo();
+        LoginInfo loginInfo = new LoginInfo("","");
         model.addAttribute("logininfo", loginInfo);
         return "login";
     }
@@ -57,7 +57,7 @@ public class AccountController {
         Account account = new Account();
         BeanUtils.copyProperties(registerInfo, account, "id");
         account.setBalance(0);
-        account.setRole(registerInfo.getRole());
+        account.setRole(registerInfo.role());
 
         Account registeredAccount = accountService.register(registerInfo);
         session.setAttribute("accountInfo", registeredAccount);

@@ -1,15 +1,5 @@
 package com.talent.java.batch11.springbootapp.dto.request;
 
-import lombok.Data;
-
-@Data
-public class RegisterInfo {
-    private String name;
-    private String email;
-    private String password;
-    private String confirmPassword;
-    private String phoneNumber;
-    private String address;
-    private String role;
+public record RegisterInfo(String name,String email,String password,String confirmPassword,String phoneNumber,String address,String role) {
 
 }
